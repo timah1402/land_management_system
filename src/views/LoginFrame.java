@@ -80,7 +80,7 @@ public class LoginFrame extends JFrame {
         titleLabel.setForeground(Color.WHITE);
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        JLabel subtitleLabel = new JLabel("Land Management System");
+        JLabel subtitleLabel = new JLabel("SENTERRES");
         subtitleLabel.setFont(new Font("Arial", Font.PLAIN, 14));
         subtitleLabel.setForeground(new Color(236, 240, 241));
         subtitleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
