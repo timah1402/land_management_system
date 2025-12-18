@@ -466,10 +466,26 @@ public class ParcelDAO {
         parcel.setStatus(ParcelStatus.valueOf(rs.getString("statut_parcelle")));
         parcel.setEstimatedValue(rs.getBigDecimal("valeur_estimee"));
         parcel.setCurrentOwnerId(rs.getInt("proprietaire_actuel"));
-        parcel.setAcquisitionDate(rs.getDate("date_acquisition"));
-        parcel.setRegisteredAt(rs.getTimestamp("date_enregistrement"));
-        parcel.setLastModified(rs.getTimestamp("derniere_modification"));
+
+        // Safe date parsing
+        try {
+            parcel.setAcquisitionDate(rs.getDate("date_acquisition"));
+        } catch (SQLException e) {
+            parcel.setAcquisitionDate(null);
+        }
+
+        try {
+            parcel.setRegisteredAt(rs.getTimestamp("date_enregistrement"));
+        } catch (SQLException e) {
+            parcel.setRegisteredAt(null);
+        }
+
+        try {
+            parcel.setLastModified(rs.getTimestamp("derniere_modification"));
+        } catch (SQLException e) {
+            parcel.setLastModified(null);
+        }
+
         parcel.setNotes(rs.getString("notes"));
         return parcel;
-    }
-}
+    }}

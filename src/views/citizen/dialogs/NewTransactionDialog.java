@@ -8,6 +8,7 @@ import java.awt.*;
 import java.math.BigDecimal;
 import java.sql.Date;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -45,7 +46,12 @@ public class NewTransactionDialog extends JDialog {
     }
 
     private void loadData() {
-        allParcels = parcelDAO.getAllParcels();
+        // Citizens should only see their own parcels
+        if (currentCitizen != null) {
+            allParcels = parcelDAO.getParcelsByOwner(currentCitizen.getCitizenId());
+        } else {
+            allParcels = new ArrayList<>();
+        }
         allCitizens = citizenDAO.getAllCitizens();
     }
 
@@ -66,7 +72,7 @@ public class NewTransactionDialog extends JDialog {
         // Parcel Selection
         gbc.gridx = 0;
         gbc.gridy = row;
-        panel.add(new JLabel("Select Parcel:"), gbc);
+        panel.add(new JLabel("Select Your Parcel:"), gbc);
 
         String[] parcelOptions = createParcelOptions();
         parcelCombo = new JComboBox<>(parcelOptions);
@@ -132,8 +138,12 @@ public class NewTransactionDialog extends JDialog {
     }
 
     private String[] createParcelOptions() {
+        if (allParcels.isEmpty()) {
+            return new String[]{"-- You don't own any parcels yet --"};
+        }
+
         String[] options = new String[allParcels.size() + 1];
-        options[0] = "-- Select Parcel --";
+        options[0] = "-- Select Your Parcel --";
 
         for (int i = 0; i < allParcels.size(); i++) {
             Parcel parcel = allParcels.get(i);
@@ -176,6 +186,15 @@ public class NewTransactionDialog extends JDialog {
 
     private void submitTransaction() {
         try {
+            // Check if user has any parcels
+            if (allParcels.isEmpty()) {
+                JOptionPane.showMessageDialog(this,
+                        "You don't own any parcels yet. You cannot create a transaction.",
+                        "No Parcels",
+                        JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
             if (parcelCombo.getSelectedIndex() == 0) {
                 JOptionPane.showMessageDialog(this, "Please select a parcel", "Error", JOptionPane.ERROR_MESSAGE);
                 return;

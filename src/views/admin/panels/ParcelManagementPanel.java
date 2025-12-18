@@ -7,11 +7,13 @@ import views.admin.dialogs.AddParcelDialog;
 import views.admin.dialogs.ParcelDetailsDialog;
 
 import javax.swing.*;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.JTableHeader;
 import java.awt.*;
 
 /**
- * Panel for managing parcels
+ * IMPROVED Parcel Management Panel with modern UI
  */
 public class ParcelManagementPanel extends JPanel {
 
@@ -19,64 +21,156 @@ public class ParcelManagementPanel extends JPanel {
     private CitizenDAO citizenDAO;
     private JTable parcelTable;
     private DefaultTableModel parcelTableModel;
+    private JTextField searchField;
+    private JComboBox<String> statusFilter;
+    private JComboBox<String> regionFilter;
 
     public ParcelManagementPanel(ParcelDAO parcelDAO, CitizenDAO citizenDAO) {
         this.parcelDAO = parcelDAO;
         this.citizenDAO = citizenDAO;
 
         initializeUI();
-        loadParcels();
+//        loadParcels();
     }
 
     private void initializeUI() {
-        setLayout(new BorderLayout());
-        setBackground(Color.WHITE);
-        setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        setLayout(new BorderLayout(0, 0));
+        setBackground(new Color(236, 240, 241));
 
-        // Top panel
-        add(createTopPanel(), BorderLayout.NORTH);
+        // Header with gradient
+        add(createHeaderPanel(), BorderLayout.NORTH);
 
-        // Table
-        add(createTablePanel(), BorderLayout.CENTER);
+        // Main content
+        add(createMainPanel(), BorderLayout.CENTER);
 
-        // Bottom panel
-        add(createBottomPanel(), BorderLayout.SOUTH);
+        // Action buttons at bottom
+        add(createActionPanel(), BorderLayout.SOUTH);
     }
 
-    private JPanel createTopPanel() {
-        JPanel topPanel = new JPanel(new BorderLayout());
-        topPanel.setBackground(Color.WHITE);
-        topPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 20, 0));
+    private JPanel createHeaderPanel() {
+        JPanel headerPanel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2d = (Graphics2D) g;
+                g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+                int w = getWidth(), h = getHeight();
+                // Green gradient for parcels (land/nature feel)
+                GradientPaint gp = new GradientPaint(0, 0, new Color(46, 204, 113), w, 0, new Color(39, 174, 96));
+                g2d.setPaint(gp);
+                g2d.fillRect(0, 0, w, h);
+            }
+        };
+        headerPanel.setLayout(new BorderLayout());
+        headerPanel.setPreferredSize(new Dimension(0, 80));
 
-        JLabel titleLabel = new JLabel("Parcel Management");
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        // Title
+        JLabel titleLabel = new JLabel("🗺️ Parcel Management");
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
+        titleLabel.setForeground(Color.WHITE);
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(20, 30, 20, 20));
 
-        JPanel buttonGroup = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        buttonGroup.setBackground(Color.WHITE);
+        // Button panel
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 20));
+        buttonPanel.setOpaque(false);
 
-        JButton addParcelButton = new JButton("Add New Parcel");
-        addParcelButton.setFont(new Font("Arial", Font.PLAIN, 12));
-        addParcelButton.setBackground(new Color(46, 204, 113));
-        addParcelButton.setForeground(Color.WHITE);
-        addParcelButton.setOpaque(true);
-        addParcelButton.setBorderPainted(false);
-        addParcelButton.addActionListener(e -> showAddParcelDialog());
+        JButton addButton = createStyledButton("➕ Add Parcel", new Color(52, 152, 219));
+        addButton.setPreferredSize(new Dimension(140, 40));
+        addButton.addActionListener(e -> showAddParcelDialog());
 
-        JButton refreshButton = new JButton("Refresh");
-        refreshButton.setFont(new Font("Arial", Font.PLAIN, 12));
+        JButton refreshButton = createStyledButton("🔄 Refresh", Color.WHITE);
+        refreshButton.setForeground(new Color(46, 204, 113));
+        refreshButton.setPreferredSize(new Dimension(120, 40));
         refreshButton.addActionListener(e -> loadParcels());
 
-        buttonGroup.add(addParcelButton);
-        buttonGroup.add(refreshButton);
+        buttonPanel.add(addButton);
+        buttonPanel.add(refreshButton);
 
-        topPanel.add(titleLabel, BorderLayout.WEST);
-        topPanel.add(buttonGroup, BorderLayout.EAST);
+        headerPanel.add(titleLabel, BorderLayout.WEST);
+        headerPanel.add(buttonPanel, BorderLayout.EAST);
 
-        return topPanel;
+        return headerPanel;
     }
 
-    private JScrollPane createTablePanel() {
-        String[] columnNames = {"ID", "Parcel #", "Land Title", "Area (ha)", "Type", "Status", "Owner", "Region"};
+    private JPanel createMainPanel() {
+        JPanel mainPanel = new JPanel(new BorderLayout(0, 15));
+        mainPanel.setBackground(new Color(236, 240, 241));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        // Search and filter panel
+        mainPanel.add(createSearchPanel(), BorderLayout.NORTH);
+
+        // Table
+        mainPanel.add(createModernTable(), BorderLayout.CENTER);
+
+        return mainPanel;
+    }
+
+    private JPanel createSearchPanel() {
+        JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 10));
+        searchPanel.setBackground(Color.WHITE);
+        searchPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(189, 195, 199), 1),
+                BorderFactory.createEmptyBorder(10, 15, 10, 15)
+        ));
+
+        // Search icon and field
+        JLabel searchIcon = new JLabel("🔍");
+        searchIcon.setFont(new Font("Arial", Font.PLAIN, 16));
+
+        searchField = new JTextField(20);
+        searchField.setFont(new Font("Arial", Font.PLAIN, 14));
+        searchField.setPreferredSize(new Dimension(250, 35));
+        searchField.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(189, 195, 199)),
+                BorderFactory.createEmptyBorder(5, 10, 5, 10)
+        ));
+        searchField.addActionListener(e -> filterParcels());
+
+        // Status filter
+        JLabel statusLabel = new JLabel("Status:");
+        statusLabel.setFont(new Font("Arial", Font.BOLD, 13));
+
+        statusFilter = new JComboBox<>(new String[]{
+                "All Status", "AVAILABLE", "OCCUPIED", "IN_TRANSACTION", "IN_DISPUTE", "RESERVED"
+        });
+        statusFilter.setFont(new Font("Arial", Font.PLAIN, 13));
+        statusFilter.setPreferredSize(new Dimension(150, 35));
+        statusFilter.setBackground(Color.WHITE);
+        statusFilter.addActionListener(e -> filterParcels());
+
+        // Region filter
+        JLabel regionLabel = new JLabel("Region:");
+        regionLabel.setFont(new Font("Arial", Font.BOLD, 13));
+
+        regionFilter = new JComboBox<>(new String[]{
+                "All Regions", "Dakar", "Thies", "Saint-Louis", "Ziguinchor", "Kaolack",
+                "Tambacounda", "Louga", "Fatick", "Kolda", "Matam", "Kaffrine", "Kedougou", "Sedhiou", "Diourbel"
+        });
+        regionFilter.setFont(new Font("Arial", Font.PLAIN, 13));
+        regionFilter.setPreferredSize(new Dimension(140, 35));
+        regionFilter.setBackground(Color.WHITE);
+        regionFilter.addActionListener(e -> filterParcels());
+
+        // Search button
+        JButton searchBtn = createStyledButton("Search", new Color(46, 204, 113));
+        searchBtn.setPreferredSize(new Dimension(100, 35));
+        searchBtn.addActionListener(e -> filterParcels());
+
+        searchPanel.add(searchIcon);
+        searchPanel.add(searchField);
+        searchPanel.add(Box.createHorizontalStrut(5));
+        searchPanel.add(statusLabel);
+        searchPanel.add(statusFilter);
+        searchPanel.add(regionLabel);
+        searchPanel.add(regionFilter);
+        searchPanel.add(searchBtn);
+
+        return searchPanel;
+    }
+
+    private JScrollPane createModernTable() {
+        String[] columnNames = {"ID", "Parcel #", "Land Title", "Area", "Type", "Status", "Owner", "Region"};
 
         parcelTableModel = new DefaultTableModel(columnNames, 0) {
             @Override
@@ -86,35 +180,209 @@ public class ParcelManagementPanel extends JPanel {
         };
 
         parcelTable = new JTable(parcelTableModel);
-        parcelTable.setFont(new Font("Arial", Font.PLAIN, 12));
-        parcelTable.setRowHeight(30);
+        parcelTable.setFont(new Font("Arial", Font.PLAIN, 13));
+        parcelTable.setRowHeight(45);
         parcelTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        parcelTable.setShowGrid(false);
+        parcelTable.setIntercellSpacing(new Dimension(0, 0));
+        parcelTable.setSelectionBackground(new Color(46, 204, 113, 40));
+        parcelTable.setSelectionForeground(Color.BLACK);
 
-        return new JScrollPane(parcelTable);
+        // Alternating row colors and custom rendering
+        parcelTable.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value,
+                                                           boolean isSelected, boolean hasFocus, int row, int column) {
+
+                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+
+                if (!isSelected) {
+                    c.setBackground(row % 2 == 0 ? Color.WHITE : new Color(248, 249, 250));
+                }
+
+                // Status column - render as badge
+                if (column == 5 && value != null) {
+                    return createStatusBadge(value.toString());
+                }
+
+                // Type column - add icon
+                if (column == 4 && value != null) {
+                    JLabel label = (JLabel) c;
+                    String icon = getTypeIcon(value.toString());
+                    label.setText(icon + " " + value.toString());
+                }
+
+                setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+                return c;
+            }
+        });
+
+        // Modern table header
+        JTableHeader header = parcelTable.getTableHeader();
+        header.setFont(new Font("Arial", Font.BOLD, 13));
+        header.setBackground(new Color(52, 73, 94));
+        header.setForeground(Color.WHITE);
+        header.setPreferredSize(new Dimension(0, 45));
+        ((DefaultTableCellRenderer) header.getDefaultRenderer()).setHorizontalAlignment(JLabel.LEFT);
+
+        // Column widths
+        parcelTable.getColumnModel().getColumn(0).setPreferredWidth(50);
+        parcelTable.getColumnModel().getColumn(1).setPreferredWidth(120);
+        parcelTable.getColumnModel().getColumn(2).setPreferredWidth(120);
+        parcelTable.getColumnModel().getColumn(3).setPreferredWidth(80);
+        parcelTable.getColumnModel().getColumn(4).setPreferredWidth(120);
+        parcelTable.getColumnModel().getColumn(5).setPreferredWidth(120);
+        parcelTable.getColumnModel().getColumn(6).setPreferredWidth(100);
+        parcelTable.getColumnModel().getColumn(7).setPreferredWidth(100);
+
+        // Double-click to view details
+        parcelTable.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                if (evt.getClickCount() == 2) {
+                    viewParcelDetails();
+                }
+            }
+        });
+
+        JScrollPane scrollPane = new JScrollPane(parcelTable);
+        scrollPane.setBorder(BorderFactory.createLineBorder(new Color(189, 195, 199)));
+        scrollPane.getViewport().setBackground(Color.WHITE);
+
+        return scrollPane;
     }
 
-    private JPanel createBottomPanel() {
-        JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
-        bottomPanel.setBackground(Color.WHITE);
+    private String getTypeIcon(String type) {
+        switch (type) {
+            case "RESIDENTIAL": return "🏠";
+            case "COMMERCIAL": return "🏢";
+            case "AGRICULTURAL": return "🌾";
+            case "INDUSTRIAL": return "🏭";
+            case "MIXED": return "🏘️";
+            default: return "📍";
+        }
+    }
 
-        JButton viewButton = new JButton("View Details");
-        viewButton.addActionListener(e -> viewParcelDetails());
+    private JLabel createStatusBadge(String status) {
+        JLabel badge = new JLabel(status);
+        badge.setOpaque(true);
+        badge.setFont(new Font("Arial", Font.BOLD, 11));
+        badge.setHorizontalAlignment(SwingConstants.CENTER);
+        badge.setBorder(BorderFactory.createEmptyBorder(5, 12, 5, 12));
 
-        JButton editButton = new JButton("Edit Parcel");
-        editButton.addActionListener(e -> editParcel());
+        switch (status) {
+            case "AVAILABLE":
+                badge.setBackground(new Color(76, 175, 80));
+                badge.setForeground(Color.WHITE);
+                break;
+            case "OCCUPIED":
+                badge.setBackground(new Color(52, 152, 219));
+                badge.setForeground(Color.WHITE);
+                break;
+            case "IN_TRANSACTION":
+                badge.setBackground(new Color(255, 193, 7));
+                badge.setForeground(new Color(102, 77, 3));
+                break;
+            case "IN_DISPUTE":
+                badge.setBackground(new Color(244, 67, 54));
+                badge.setForeground(Color.WHITE);
+                break;
+            case "RESERVED":
+                badge.setBackground(new Color(156, 39, 176));
+                badge.setForeground(Color.WHITE);
+                break;
+            default:
+                badge.setBackground(new Color(189, 195, 199));
+                badge.setForeground(Color.WHITE);
+        }
 
-        JButton deleteButton = new JButton("Delete Parcel");
-        deleteButton.setBackground(new Color(231, 76, 60));
-        deleteButton.setForeground(Color.WHITE);
-        deleteButton.setOpaque(true);
-        deleteButton.setBorderPainted(false);
-        deleteButton.addActionListener(e -> deleteParcel());
+        return badge;
+    }
 
-        bottomPanel.add(viewButton);
-        bottomPanel.add(editButton);
-        bottomPanel.add(deleteButton);
+    private JPanel createActionPanel() {
+        JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 15));
+        actionPanel.setBackground(Color.WHITE);
+        actionPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(189, 195, 199)));
 
-        return bottomPanel;
+        // View Details button
+        JButton viewBtn = createStyledButton("👁️ View Details", new Color(52, 152, 219));
+        viewBtn.setPreferredSize(new Dimension(160, 45));
+        viewBtn.addActionListener(e -> viewParcelDetails());
+
+        // Edit button
+        JButton editBtn = createStyledButton("✏️ Edit", new Color(230, 126, 34));
+        editBtn.setPreferredSize(new Dimension(160, 45));
+        editBtn.addActionListener(e -> editParcel());
+
+        // Delete button
+        JButton deleteBtn = createStyledButton("🗑️ Delete", new Color(231, 76, 60));
+        deleteBtn.setPreferredSize(new Dimension(160, 45));
+        deleteBtn.addActionListener(e -> deleteParcel());
+
+        actionPanel.add(viewBtn);
+        actionPanel.add(editBtn);
+        actionPanel.add(deleteBtn);
+
+        return actionPanel;
+    }
+
+    private JButton createStyledButton(String text, Color bgColor) {
+        JButton button = new JButton(text);
+        button.setFont(new Font("Arial", Font.BOLD, 14));
+        button.setBackground(bgColor);
+        button.setForeground(bgColor == Color.WHITE ? new Color(46, 204, 113) : Color.WHITE);
+        button.setFocusPainted(false);
+        button.setBorderPainted(false);
+        button.setOpaque(true);
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        // Hover effect
+        Color hoverColor = bgColor == Color.WHITE ? new Color(236, 240, 241) : bgColor.darker();
+        button.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                button.setBackground(hoverColor);
+            }
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                button.setBackground(bgColor);
+            }
+        });
+
+        return button;
+    }
+
+    private void filterParcels() {
+        String searchText = searchField.getText().trim().toLowerCase();
+        String status = (String) statusFilter.getSelectedItem();
+        String region = (String) regionFilter.getSelectedItem();
+
+        parcelTableModel.setRowCount(0);
+        var parcels = parcelDAO.getAllParcels();
+
+        for (var parcel : parcels) {
+            // Status filter
+            if (!"All Status".equals(status) && !parcel.getStatus().toString().equals(status)) {
+                continue;
+            }
+
+            // Region filter
+            if (!"All Regions".equals(region) && !parcel.getRegion().equals(region)) {
+                continue;
+            }
+
+            // Search filter
+            String searchableText = (
+                    parcel.getParcelId() + " " +
+                            parcel.getParcelNumber() + " " +
+                            (parcel.getLandTitle() != null ? parcel.getLandTitle() : "") + " " +
+                            parcel.getLandType() + " " +
+                            parcel.getRegion()
+            ).toLowerCase();
+
+            if (!searchText.isEmpty() && !searchableText.contains(searchText)) {
+                continue;
+            }
+
+            addParcelRow(parcel);
+        }
     }
 
     public void loadParcels() {
@@ -122,18 +390,22 @@ public class ParcelManagementPanel extends JPanel {
         var parcels = parcelDAO.getAllParcels();
 
         for (var parcel : parcels) {
-            Object[] row = {
-                    parcel.getParcelId(),
-                    parcel.getParcelNumber(),
-                    parcel.getLandTitle() != null ? parcel.getLandTitle() : "N/A",
-                    parcel.getArea(),
-                    parcel.getLandType(),
-                    parcel.getStatus(),
-                    parcel.getCurrentOwnerId() > 0 ? "Citizen #" + parcel.getCurrentOwnerId() : "Unassigned",
-                    parcel.getRegion()
-            };
-            parcelTableModel.addRow(row);
+            addParcelRow(parcel);
         }
+    }
+
+    private void addParcelRow(Parcel parcel) {
+        Object[] row = {
+                parcel.getParcelId(),
+                parcel.getParcelNumber(),
+                parcel.getLandTitle() != null ? parcel.getLandTitle() : "N/A",
+                String.format("%.2f %s", parcel.getArea(), parcel.getAreaUnit()),
+                parcel.getLandType(),
+                parcel.getStatus(),
+                parcel.getCurrentOwnerId() > 0 ? "Citizen #" + parcel.getCurrentOwnerId() : "Unassigned",
+                parcel.getRegion()
+        };
+        parcelTableModel.addRow(row);
     }
 
     private void showAddParcelDialog() {
@@ -149,7 +421,7 @@ public class ParcelManagementPanel extends JPanel {
     private void viewParcelDetails() {
         int selectedRow = parcelTable.getSelectedRow();
         if (selectedRow == -1) {
-            JOptionPane.showMessageDialog(this, "Please select a parcel", "No Selection", JOptionPane.WARNING_MESSAGE);
+            showStyledMessage("Please select a parcel to view", "No Selection", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
@@ -168,26 +440,41 @@ public class ParcelManagementPanel extends JPanel {
     private void editParcel() {
         int selectedRow = parcelTable.getSelectedRow();
         if (selectedRow == -1) {
-            JOptionPane.showMessageDialog(this, "Please select a parcel to edit", "No Selection", JOptionPane.WARNING_MESSAGE);
+            showStyledMessage("Please select a parcel to edit", "No Selection", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        JOptionPane.showMessageDialog(this, "Edit functionality coming soon!", "Info", JOptionPane.INFORMATION_MESSAGE);
+        showStyledMessage("✏️ Edit functionality coming soon!\n\nYou can currently:\n• View parcel details\n• Add new parcels\n• Delete parcels",
+                "Feature In Development", JOptionPane.INFORMATION_MESSAGE);
     }
 
     private void deleteParcel() {
         int selectedRow = parcelTable.getSelectedRow();
         if (selectedRow == -1) {
-            JOptionPane.showMessageDialog(this, "Please select a parcel to delete", "No Selection", JOptionPane.WARNING_MESSAGE);
+            showStyledMessage("Please select a parcel to delete", "No Selection", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
         int parcelId = (int) parcelTableModel.getValueAt(selectedRow, 0);
         String parcelNumber = (String) parcelTableModel.getValueAt(selectedRow, 1);
+        String status = parcelTableModel.getValueAt(selectedRow, 5).toString();
+
+        // Prevent deleting parcels in transaction or dispute
+        if ("IN_TRANSACTION".equals(status) || "IN_DISPUTE".equals(status)) {
+            showStyledMessage(
+                    "Cannot delete parcel that is " + status.replace("_", " ").toLowerCase() + "!\n\n" +
+                            "Please resolve the " + (status.equals("IN_TRANSACTION") ? "transaction" : "dispute") + " first.",
+                    "Cannot Delete",
+                    JOptionPane.WARNING_MESSAGE
+            );
+            return;
+        }
 
         int confirm = JOptionPane.showConfirmDialog(
                 this,
-                "Delete parcel: " + parcelNumber + "?\nThis action cannot be undone.",
+                "⚠️ DELETE PARCEL: " + parcelNumber + "?\n\n" +
+                        "This action CANNOT be undone!\n" +
+                        "All associated data will be permanently removed.",
                 "Confirm Deletion",
                 JOptionPane.YES_NO_OPTION,
                 JOptionPane.WARNING_MESSAGE
@@ -195,11 +482,15 @@ public class ParcelManagementPanel extends JPanel {
 
         if (confirm == JOptionPane.YES_OPTION) {
             if (parcelDAO.deleteParcel(parcelId)) {
-                JOptionPane.showMessageDialog(this, "Parcel deleted successfully", "Success", JOptionPane.INFORMATION_MESSAGE);
+                showStyledMessage("✓ Parcel deleted successfully", "Success", JOptionPane.INFORMATION_MESSAGE);
                 loadParcels();
             } else {
-                JOptionPane.showMessageDialog(this, "Failed to delete parcel", "Error", JOptionPane.ERROR_MESSAGE);
+                showStyledMessage("✗ Failed to delete parcel.\nCheck console for details.", "Error", JOptionPane.ERROR_MESSAGE);
             }
         }
+    }
+
+    private void showStyledMessage(String message, String title, int messageType) {
+        JOptionPane.showMessageDialog(this, message, title, messageType);
     }
 }
